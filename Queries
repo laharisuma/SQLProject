@@ -1,0 +1,124 @@
+/*Query 1 - query used for first insight */
+
+SELECT
+    f.title,
+    c.name,
+    count(i.inventory_id) rental_count
+FROM
+    film f
+    JOIN film_category fc ON f.film_id = fc.film_id
+    JOIN category c ON c.category_id = fc.category_id
+    JOIN inventory i ON i.film_id = f.film_id
+    JOIN rental r ON r.inventory_id = i.inventory_id
+GROUP BY
+    c.name,
+    f.title
+ORDER BY
+    rental_count DESC
+LIMIT 10
+
+
+
+
+/*Query 2- query used for 2nd insight */
+
+SELECT
+    f.rating,
+    count(i.inventory_id) rental_count
+FROM
+    film f
+    JOIN film_category fc ON f.film_id = fc.film_id
+    JOIN category c ON c.category_id = fc.category_id
+    JOIN inventory i ON i.film_id = f.film_id
+    JOIN rental r ON r.inventory_id = i.inventory_id
+GROUP BY
+    f.rating
+ORDER BY
+    rental_count DESC
+
+
+
+/*Query 3 - Query used for 3rd insight */
+
+SELECT
+    fullName,
+    rental_count,
+    rental_Year,
+    (
+        CASE WHEN rental_month = 1 THEN
+            'January'
+        WHEN rental_month = 2 THEN
+            'Feburary'
+        WHEN rental_month = 3 THEN
+            'March'
+        WHEN rental_month = 4 THEN
+            'April'
+        WHEN rental_month = 5 THEN
+            'May'
+        WHEN rental_month = 6 THEN
+            'June'
+        WHEN rental_month = 7 THEN
+            'July'
+        WHEN rental_month = 8 THEN
+            'August'
+        WHEN rental_month = 9 THEN
+            'September'
+        WHEN rental_month = 10 THEN
+            'October'
+        WHEN rental_month = 11 THEN
+            'Novemeber'
+        ELSE
+            'December'
+        END) AS rental_Month
+FROM (
+    SELECT
+        extract(month FROM rental_date) AS rental_month,
+        extract(year FROM rental_date) AS rental_Year,
+        count(i.inventory_id) rental_count,
+        concat(cs.first_name, ' ', cs.last_name) AS fullName
+    FROM
+        film f
+        JOIN film_category fc ON f.film_id = fc.film_id
+        JOIN category c ON c.category_id = fc.category_id
+        JOIN inventory i ON i.film_id = f.film_id
+        JOIN rental r ON r.inventory_id = i.inventory_id
+        JOIN payment p ON p.rental_id = r.rental_id
+        JOIN customer cs ON cs.customer_id = r.customer_id
+    GROUP BY
+        rental_year,
+        r.rental_date,
+        cs.first_name,
+        cs.last_name) sub
+WHERE
+    rental_count >= 2
+
+
+
+/*Query 4 - query for 4th insight */
+
+SELECT DISTINCT
+    FullName,
+    AverageRentalRate,
+    max(rental_rate) AS HighestRentalRate
+FROM ( SELECT DISTINCT
+        count(fa.actor_id) numOfMovies,
+        concat(a.first_name, ' ', a.last_name) AS FullName,
+        f.rental_rate,
+        avg(f.rental_rate) OVER (PARTITION BY a.actor_id) AS AverageRentalRate
+    FROM
+        film f
+        JOIN film_actor fa ON f.film_id = fa.film_id
+        JOIN actor a ON a.actor_id = fa.actor_id
+    GROUP BY
+        f.rental_duration,
+        FullName,
+        f.rental_rate,
+        f.length,
+        a.actor_id ORDER BY
+            numofmovies DESC) sub
+GROUP BY
+    FullName,
+    averagerentalrate
+ORDER BY
+    averagerentalrate DESC
+LIMIT 10
